@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>📦 Hub de Logística | RabbitMQ Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Socket.IO via CDN para simplicidade -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"
+          integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO"
+          crossorigin="anonymous"></script>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">📦</span>
+      <div>
+        <h1>Hub de Logística</h1>
+        <p>Rastreamento de Pedidos em Tempo Real · RabbitMQ + Node.js</p>
+      </div>
+    </div>
+    <div class="conn-status" id="conn-status">
+      <span class="dot"></span>
+      <span class="label">Conectando...</span>
+    </div>
+  </header>
+
+  <!-- BARRA DE AÇÕES -->
+  <section class="actions">
+    <button id="btn-1" class="btn btn-primary">
+      ➕ Gerar 1 pedido
+    </button>
+    <button id="btn-5" class="btn btn-secondary">
+      🚀 Enviar 5 mensagens
+    </button>
+    <button id="btn-20" class="btn btn-secondary">
+      💥 Disparar lote de 20
+    </button>
+    <a class="btn btn-ghost" href="http://localhost:15672" target="_blank">
+      🐇 Abrir RabbitMQ Admin
+    </a>
+  </section>
+
+  <!-- MÉTRICAS RESUMIDAS -->
+  <section class="metric-grid">
+    <div class="metric-card">
+      <div class="metric-label">Pedidos publicados</div>
+      <div class="metric-value" id="m-publicados">0</div>
+      <div class="metric-foot">Total na sessão</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Mensagens processadas</div>
+      <div class="metric-value" id="m-processadas">0</div>
+      <div class="metric-foot">Soma dos 3 consumidores</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Consumidores ativos</div>
+      <div class="metric-value" id="m-consumidores">0</div>
+      <div class="metric-foot">Conectados ao broker</div>
+    </div>
+    <div class="metric-card highlight">
+      <div class="metric-label">Em fila agora</div>
+      <div class="metric-value" id="m-em-fila">0</div>
+      <div class="metric-foot">Mensagens aguardando</div>
+    </div>
+  </section>
+
+  <!-- CARDS DAS FILAS -->
+  <section class="queues-grid">
+    <div class="queue-card" data-queue="rastreamento.queue">
+      <div class="queue-header">
+        <span class="queue-icon">🗺️</span>
+        <div>
+          <h3>Rastreamento</h3>
+          <small>rastreamento.queue</small>
+        </div>
+        <span class="badge" id="b-rastreamento">●</span>
+      </div>
+      <div class="queue-stats">
+        <div>
+          <span class="stat-label">Mensagens</span>
+          <strong class="stat-value" id="q-rastreamento-msg">0</strong>
+        </div>
+        <div>
+          <span class="stat-label">Consumidores</span>
+          <strong class="stat-value" id="q-rastreamento-cons">0</strong>
+        </div>
+        <div>
+          <span class="stat-label">Processadas</span>
+          <strong class="stat-value" id="q-rastreamento-done">0</strong>
+        </div>
+      </div>
+      <div class="bar"><div class="bar-fill" id="bar-rastreamento"></div></div>
+    </div>
+
+    <div class="queue-card" data-queue="notificacao.queue">
+      <div class="queue-header">
+        <span class="queue-icon">📧</span>
+        <div>
+          <h3>Notificação</h3>
+          <small>notificacao.queue</small>
+        </div>
+        <span class="badge" id="b-notificacao">●</span>
+      </div>
+      <div class="queue-stats">
+        <div>
+          <span class="stat-label">Mensagens</span>
+          <strong class="stat-value" id="q-notificacao-msg">0</strong>
+        </div>
+        <div>
+          <span class="stat-label">Consumidores</span>
+          <strong class="stat-value" id="q-notificacao-cons">0</strong>
+        </div>
+        <div>
+          <span class="stat-label">Processadas</span>
+          <strong class="stat-value" id="q-notificacao-done">0</strong>
+        </div>
+      </div>
+      <div class="bar"><div class="bar-fill" id="bar-notificacao"></div></div>
+    </div>
+
+    <div class="queue-card" data-queue="estoque.queue">
+      <div class="queue-header">
+        <span class="queue-icon">📦</span>
+        <div>
+          <h3>Estoque</h3>
+          <small>estoque.queue</small>
+        </div>
+        <span class="badge" id="b-estoque">●</span>
+      </div>
+      <div class="queue-stats">
+        <div>
+          <span class="stat-label">Mensagens</span>
+          <strong class="stat-value" id="q-estoque-msg">0</strong>
+        </div>
+        <div>
+          <span class="stat-label">Consumidores</span>
+          <strong class="stat-value" id="q-estoque-cons">0</strong>
+        </div>
+        <div>
+          <span class="stat-label">Processadas</span>
+          <strong class="stat-value" id="q-estoque-done">0</strong>
+        </div>
+      </div>
+      <div class="bar"><div class="bar-fill" id="bar-estoque"></div></div>
+    </div>
+  </section>
+
+  <!-- ÁREA INFERIOR: PEDIDOS + LOG -->
+  <section class="bottom-grid">
+
+    <div class="panel">
+      <div class="panel-header">
+        <h2>📋 Últimos Pedidos</h2>
+        <button id="btn-limpar-pedidos" class="link">limpar</button>
+      </div>
+      <div class="orders-list" id="orders-list">
+        <div class="empty">Nenhum pedido ainda. Clique em "Gerar pedido" 👆</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <h2>📜 Logs em Tempo Real</h2>
+        <button id="btn-limpar-log" class="link">limpar</button>
+      </div>
+      <div class="log-list" id="log-list">
+        <div class="empty">Aguardando eventos...</div>
+      </div>
+    </div>
+
+  </section>
+
+  <footer>
+    <span>
+      Backend: <code>http://localhost:3000</code> · RabbitMQ Admin:
+      <code>http://localhost:15672</code> (guest/guest)
+    </span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

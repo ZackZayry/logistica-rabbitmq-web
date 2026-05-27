@@ -1,0 +1,12 @@
+{
+  "name": "consumer-estoque",
+  "version": "1.0.0",
+  "description": "Consumidor RabbitMQ - Atualiza estoque e registra saída do CD",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.4"
+  }
+}

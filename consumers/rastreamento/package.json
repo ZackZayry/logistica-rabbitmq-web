@@ -1,0 +1,12 @@
+{
+  "name": "consumer-rastreamento",
+  "version": "1.0.0",
+  "description": "Consumidor RabbitMQ - Atualiza rastreamento e mapa",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.4"
+  }
+}

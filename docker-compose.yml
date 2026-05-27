@@ -1,0 +1,130 @@
+version: "3.9"
+
+# =====================================================================
+# Docker Compose - Hub de Logística com RabbitMQ
+# ---------------------------------------------------------------------
+# Sobe TODA a infraestrutura:
+#   - RabbitMQ (broker de mensageria + painel de admin)
+#   - Backend API (produtor + Socket.IO)
+#   - Frontend (Nginx servindo HTML/CSS/JS)
+#   - 3 Consumidores independentes (rastreamento, notificacao, estoque)
+# =====================================================================
+
+services:
+
+  # -------------------------------------------------------------------
+  # RABBITMQ - Message Broker
+  # -------------------------------------------------------------------
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"     # Porta AMQP (comunicação entre apps e broker)
+      - "15672:15672"   # Painel web de administração
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      # Volume nomeado para PERSISTÊNCIA das filas e mensagens.
+      # Garante que mesmo após reiniciar o container as mensagens
+      # ainda estarão lá (testando o requisito de persistência).
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - logistica-net
+
+  # -------------------------------------------------------------------
+  # BACKEND - API REST + Produtor + Socket.IO
+  # -------------------------------------------------------------------
+  backend:
+    build: ./backend
+    container_name: backend
+    ports:
+      - "3000:3000"
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      PORT: 3000
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - logistica-net
+    restart: unless-stopped
+
+  # -------------------------------------------------------------------
+  # FRONTEND - Dashboard Web (Nginx)
+  # -------------------------------------------------------------------
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    networks:
+      - logistica-net
+    restart: unless-stopped
+
+  # -------------------------------------------------------------------
+  # CONSUMIDOR 1 - Rastreamento
+  # Atualiza rastreamento, mapa e simula movimentação
+  # -------------------------------------------------------------------
+  consumer-rastreamento:
+    build: ./consumers/rastreamento
+    container_name: consumer-rastreamento
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - logistica-net
+    restart: unless-stopped
+
+  # -------------------------------------------------------------------
+  # CONSUMIDOR 2 - Notificacao
+  # Simula envio de e-mail/SMS ao cliente
+  # -------------------------------------------------------------------
+  consumer-notificacao:
+    build: ./consumers/notificacao
+    container_name: consumer-notificacao
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - logistica-net
+    restart: unless-stopped
+
+  # -------------------------------------------------------------------
+  # CONSUMIDOR 3 - Estoque
+  # Atualiza estoque e registra saída do CD
+  # -------------------------------------------------------------------
+  consumer-estoque:
+    build: ./consumers/estoque
+    container_name: consumer-estoque
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - logistica-net
+    restart: unless-stopped
+
+# =====================================================================
+# Rede e volumes
+# =====================================================================
+networks:
+  logistica-net:
+    driver: bridge
+
+volumes:
+  rabbitmq_data:
+    driver: local

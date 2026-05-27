@@ -1,0 +1,16 @@
+{
+  "name": "logistica-backend",
+  "version": "1.0.0",
+  "description": "API REST + Produtor RabbitMQ + Socket.IO para Hub de Logística",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.4",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}

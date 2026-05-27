@@ -1,0 +1,12 @@
+{
+  "name": "consumer-notificacao",
+  "version": "1.0.0",
+  "description": "Consumidor RabbitMQ - Simula envio de email/SMS",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.4"
+  }
+}
